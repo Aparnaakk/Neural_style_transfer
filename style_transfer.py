@@ -9,16 +9,14 @@ import pandas as pd
 
 #intializing output directory
 output_dir="./output" #intializing output directory
-image_for_style="./"+fest+".jpg"#path of style image
-content_image=path#path of content image
+image_for_style="./style.jpg"#path of style image
+content_image="./content.jpg"#path of content image
 
 #intializing parameters of output image
 image_width=800
 image_height=600
 color_channels=3
 
-beta=5#less content ratio
-alpha=200#or else try 200
 
 vgg = scipy.io.loadmat("vgg.mat")#loading the weights of the vgg16 model
 layers = vgg['layers']#loading the all weights of all the layers
