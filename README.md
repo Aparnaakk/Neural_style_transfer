@@ -7,8 +7,10 @@ Input image:
 Style image:
 ![alt text](style.jpg "Input image")
 
-Output:
+
+Output image:
 ![alt text](output.jpg "Input image")
+
 
 Parameters:
 
