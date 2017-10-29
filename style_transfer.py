@@ -90,7 +90,7 @@ def pooling(prev):
     """
     performs average pooling of the prev layer(average pooling gives better results as compared to max pooling)
     :param prev:
-    :return:
+    :return: pooling property
     """
     return tf.nn.avg_pool(prev,ksize=[1,2,2,1],strides=[1,2,2,1],padding="SAME")
 
@@ -163,7 +163,7 @@ def style_loss_single(a,g):
     function calculates style loss of content_image for a given layer of the VGG16 network
     :param a:
     :param g:
-    :return:
+    :return:single style loss
     """
     m=a.shape[1]*a.shape[2]
     n=a.shape[3]
@@ -175,7 +175,7 @@ def style_loss_single(a,g):
 def total_style_loss():
     """
     calculates style loss over all layers of given VGG16 network. sums over all losses and finds the net style_loss
-    :return:
+    :return:loss over all layers
     """
     style_layer=["conv1_1","conv2_1","conv3_1","conv4_1","conv5_1"]
     sum=0
@@ -215,14 +215,12 @@ def main():
 
     optimizer = tf.train.AdamOptimizer(6.0,0.9,0.999,1e-8)
     train_step = optimizer.minimize(total_loss)
-    """
-    optimizer = tf.train.AdamOptimizer(10,0.9,0.999,1e-8)
-    train_step = optimizer.minimize(total_loss)
-    """
+    
     sess.run(tf.global_variables_initializer())
 
     sess.run(graph['input'].assign(input_image))
     iter=1000
+    print("Producing image")
     for it in range(iter):
         sess.run(train_step)
     mixed_image=sess.run(graph['input'])
