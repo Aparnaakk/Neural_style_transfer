@@ -7,21 +7,20 @@ import scipy.misc
 
 import pandas as pd
 
-#intializing output directory
-output_dir="./output" #intializing output directory
-image_for_style="./style.jpg"#path of style image
-content_image="./content.jpg"#path of content image
+# intializing output directory
+output_dir = "./output"  # intializing output directory
+image_for_style = "./style.jpg"  # path of style image
 
-#intializing parameters of output image
-image_width=800
-image_height=600
-color_channels=3
+# intializing parameters of output image
+image_width = 800
+image_height = 600
+color_channels = 3
 
+vgg = scipy.io.loadmat("vgg.mat")  # loading the weights of the vgg16 model
+layers = vgg['layers']  # loading the all weights of all the layers
 
-vgg = scipy.io.loadmat("vgg.mat")#loading the weights of the vgg16 model
-layers = vgg['layers']#loading the all weights of all the layers
+mean_values = np.array([123.68, 116.779, 103.939]).reshape((1, 1, 1, 3))
 
-mean_values= np.array([123.68, 116.779, 103.939]).reshape((1,1,1,3))
 
 def preprocess_input(path):
     """
@@ -31,13 +30,14 @@ def preprocess_input(path):
     This function is used to
     """
     mean_values = np.array([123.68, 116.779, 103.939]).reshape((1, 1, 1, 3))
-    image = scipy.misc.imread(path)#reading image from path
-    image=scipy.misc.imresize(image, (image_height, image_width,color_channels))#reshaping image as (600,800,3)
-    image = np.reshape(image, ((1,) + image.shape))#reshaping image as (1,600,800,3)
-    image = image - mean_values#subtracting mean values
+    image = scipy.misc.imread(path)  # reading image from path
+    image = scipy.misc.imresize(image, (image_height, image_width, color_channels))  # reshaping image as (600,800,3)
+    image = np.reshape(image, ((1,) + image.shape))  # reshaping image as (1,600,800,3)
+    image = image - mean_values  # subtracting mean values
     return image
 
-def output(path,image):
+
+def output(path, image):
     """
     This function is used to
 
@@ -49,13 +49,15 @@ def output(path,image):
     image = np.clip(image, 0, 255).astype('uint8')
     scipy.misc.imsave(path, image)
 
+
 def weight(l):
     """
     returns the weights of each of the required layers of VGG19
     """
-    W=layers[0][l][0][0][2][0][0]#accessing the weights of given layer l
-    b=layers[0][l][0][0][2][0][1]#accessing the biases of given layer l
-    return W,b
+    W = layers[0][l][0][0][2][0][0]  # accessing the weights of given layer l
+    b = layers[0][l][0][0][2][0][1]  # accessing the biases of given layer l
+    return W, b
+
 
 def relu_func(input):
     """
@@ -64,27 +66,30 @@ def relu_func(input):
     """
     return tf.nn.relu(input)
 
-def conv2d(prev,l):
+
+def conv2d(prev, l):
     """
     function performs convolution of the inputted layer using weights of the VGG16 layer
     :param prev: layer of which the convolution has to be performed
     :param l: layer of the VGG16 network whose weights and biases need to be accessed
     :return: convoluted layer
     """
-    W=weight(l)[0]#accessing weights of layer l of VGG
-    b=weight(l)[1]#accessing biases of layer l of VGG16
-    W=tf.constant(W)
-    B= tf.constant(np.reshape(b, (b.size)))
-    return tf.nn.conv2d(input=prev,filter=W,strides=[1,1,1,1],padding="SAME")+B
+    W = weight(l)[0]  # accessing weights of layer l of VGG
+    b = weight(l)[1]  # accessing biases of layer l of VGG16
+    W = tf.constant(W)
+    B = tf.constant(np.reshape(b, (b.size)))
+    return tf.nn.conv2d(input=prev, filter=W, strides=[1, 1, 1, 1], padding="SAME") + B
 
-def relu_plus_conv(prev,l):
+
+def relu_plus_conv(prev, l):
     """
     performs relu and convolution together
     :param prev: layer for the function to perform relu+conv on
     :param l: layer of VGG16 with appropriate weigths and biases to be accessed
     :return: returns the relu+conv layer
     """
-    return relu_func(conv2d(prev,l))
+    return relu_func(conv2d(prev, l))
+
 
 def pooling(prev):
     """
@@ -92,11 +97,13 @@ def pooling(prev):
     :param prev:
     :return: pooling property
     """
-    return tf.nn.avg_pool(prev,ksize=[1,2,2,1],strides=[1,2,2,1],padding="SAME")
+    return tf.nn.avg_pool(prev, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding="SAME")
+
 
 def build():
     graph = {}
-    graph['input'] = graph['input'] = tf.Variable(np.zeros((1, image_height, image_width, color_channels)), name="in", dtype=tf.float32)
+    graph['input'] = graph['input'] = tf.Variable(np.zeros((1, image_height, image_width, color_channels)), name="in",
+                                                  dtype=tf.float32)
     graph['conv1_1'] = relu_plus_conv(graph['input'], 0)
     graph['conv1_2'] = relu_plus_conv(graph['conv1_1'], 2)
     graph['pool1'] = pooling(graph['conv1_1'])
@@ -124,30 +131,33 @@ def build():
     graph['pool5'] = pooling(graph['conv5_4'])
     return graph
 
-def generate_noise_image(content_image,):
+
+def generate_noise_image(content_image, ):
     """
     adding noise to the content_image, which is then updating by backpropagation
     :param content_image:
     :return: content_image with noise
     """
-    noise_image = np.random.uniform(-20, 20,(1, image_height,image_width,color_channels)).astype('float32')
+    noise_image = np.random.uniform(-20, 20, (1, image_height, image_width, color_channels)).astype('float32')
     # White noise image from the content representation. Take a weighted average
     # of the values
-    input_image = noise_image * 0.4 + content_image * 0.6#probability
+    input_image = noise_image * 0.4 + content_image * 0.6  # probability
     return input_image
 
-def content_loss(p,x):
+
+def content_loss(p, x):
     """
     function to measure content loss of the output image. measured over the conv4_2 layer of the output layer
     :param p:
     :param x:
     :return:
     """
-    m = p.shape[1] * p.shape[2]#width*height
-    n = p.shape[3]#colour channel dimensions
-    return (1/(2*n*m))*tf.reduce_sum(tf.pow(x-p,2))#removed 4*n*m
+    m = p.shape[1] * p.shape[2]  # width*height
+    n = p.shape[3]  # colour channel dimensions
+    return (1 / (2 * n * m)) * tf.reduce_sum(tf.pow(x - p, 2))  # removed 4*n*m
 
-def gram_matrix(n,m,x):
+
+def gram_matrix(n, m, x):
     """
     calculating gram matrix by reshaping x in terms of m and n
     :param n:
@@ -156,77 +166,82 @@ def gram_matrix(n,m,x):
     :return:gram matrix
     """
     x = tf.reshape(x, (m, n))
-    return tf.matmul(tf.transpose(x), x)#finding aggregate
+    return tf.matmul(tf.transpose(x), x)  # finding aggregate
 
-def style_loss_single(a,g):
+
+def style_loss_single(a, g):
     """
     function calculates style loss of content_image for a given layer of the VGG16 network
     :param a:
     :param g:
     :return:single style loss
     """
-    m=a.shape[1]*a.shape[2]
-    n=a.shape[3]
-    A=gram_matrix(n,m,a)
-    G=gram_matrix(n,m,g)
+    m = a.shape[1] * a.shape[2]
+    n = a.shape[3]
+    A = gram_matrix(n, m, a)
+    G = gram_matrix(n, m, g)
 
-    return (1/(4*n**2*m**2))*tf.reduce_sum(tf.pow(A-G,2))
+    return (1 / (4 * n ** 2 * m ** 2)) * tf.reduce_sum(tf.pow(A - G, 2))
+
 
 def total_style_loss():
     """
     calculates style loss over all layers of given VGG16 network. sums over all losses and finds the net style_loss
     :return:loss over all layers
     """
-    style_layer=["conv1_1","conv2_1","conv3_1","conv4_1","conv5_1"]
-    sum=0
-    weight=[0.2,0.2,0.2,0.2,0.2]#according to the paper, all layers are weighted accordingly
-    for i in range(0,len(style_layer)) :
-        sum+=weight[i]*style_loss_single(sess.run(graph[style_layer[i]]), graph[style_layer[i]])
+    style_layer = ["conv1_1", "conv2_1", "conv3_1", "conv4_1", "conv5_1"]
+    sum = 0
+    weight = [0.2, 0.2, 0.2, 0.2, 0.2]  # according to the paper, all layers are weighted accordingly
+    for i in range(0, len(style_layer)):
+        sum += weight[i] * style_loss_single(sess.run(graph[style_layer[i]]), graph[style_layer[i]])
     return sum
 
+
 def main():
-    #build the model
+    # build the model
     sess = tf.InteractiveSession()
+    content_image = "./content.jpg"  # path of content image
     content_image = preprocess_input(content_image)
 
+    image_for_style = "./style.jpg"  # path of style image
 
-    style=preprocess_input(image_for_style)
-    graph= model()
+    style = preprocess_input(image_for_style)
+
+    graph = build()
 
     input_image = generate_noise_image(content_image)
 
     sess.run(tf.global_variables_initializer())
 
-
     sess.run(graph['input'].assign(content_image))
-    c_l=content_loss(sess.run(graph['conv4_2']), graph['conv4_2'])
-
+    c_l = content_loss(sess.run(graph['conv4_2']), graph['conv4_2'])
 
     sess.run(graph['input'].assign(style))
-    s_l=total_style_loss()
+    s_l = total_style_loss()
     """
     sess.run(graph['input'].assign(content_image))
     d_l=diff_loss()
     """
-    beta=5#less content ratio
-    alpha=200#or else try 200
-    total_loss=beta*c_l +alpha*s_l
-    #total_loss = beta * c_l + alpha * s_l + l*d_l
+    beta = 5  # less content ratio
+    alpha = 200  # or else try 200
+    total_loss = beta * c_l + alpha * s_l
+    # total_loss = beta * c_l + alpha * s_l + l*d_l
 
-    optimizer = tf.train.AdamOptimizer(6.0,0.9,0.999,1e-8)
+    optimizer = tf.train.AdamOptimizer(6.0, 0.9, 0.999, 1e-8)
     train_step = optimizer.minimize(total_loss)
-    
+
     sess.run(tf.global_variables_initializer())
 
     sess.run(graph['input'].assign(input_image))
-    iter=1000
+    iter = 1000
     print("Producing image")
     for it in range(iter):
         sess.run(train_step)
-    mixed_image=sess.run(graph['input'])
+    mixed_image = sess.run(graph['input'])
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
-    filename='output.jpg'
-    output(filename,mixed_image)
+    filename = 'output.jpg'
+    output(filename, mixed_image)
+
 
 main()
