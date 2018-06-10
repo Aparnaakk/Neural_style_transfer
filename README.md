@@ -22,7 +22,7 @@ Parameters:
 
 4. optimizer=Adam:epsilon=6
 
-5. based on the VGG 16 network
+5. based on the VGG 16 network - you can download the weights here: https://drive.google.com/open?id=0B3s6MjhdBGh_VFZtVDFSSzNDYmc
 
 References:
 
